@@ -88,10 +88,14 @@ entities:
 
 ## ☕ Susținere / Donații
 
-Dacă această integrare vă este utilă și doriți să susțineți mentenanța și dezvoltarea viitoare a proiectului, puteți oferi o cafea:
+Dacă această integrare vă este utilă și doriți să susțineți mentenanța și dezvoltarea viitoare a proiectului, puteți oferi o cafea dezvoltatorului:
 
-- ☕ **Buy Me a Coffee**: [buymeacoffee.com](https://www.buymeacoffee.com)
-- 💳 **Revolut**: [revolut.me](https://revolut.me)
-- 🅿️ **PayPal**: [paypal.me](https://paypal.me)
+<p align="center">
+  <a href="https://buymeacoffee.com/markoopapa" target="_blank">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=markoopapa&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt="Buy Me A Coffee" />
+  </a>
+</p>
+
+- ☕ **Buy Me a Coffee**: [buymeacoffee.com/markoopapa](https://buymeacoffee.com/markoopapa)
 
 Dacă vă este de ajutor proiectul, lăsați o steluță ⭐ pe [GitHub](https://github.com/markoopapa/ha-termoficare-oradea) — ajută comunitatea să descopere mai ușor integrarea!
