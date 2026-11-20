@@ -97,5 +97,6 @@ Dacă această integrare vă este utilă și doriți să susțineți mentenanța
 </p>
 
 - ☕ **Buy Me a Coffee**: [buymeacoffee.com/markoopapa](https://buymeacoffee.com/markoopapa)
+- 💳 **Revolut**: [revolut.me/szekelckwa](https://revolut.me/szekelckwa) (`@szekelckwa`)
 
 Dacă vă este de ajutor proiectul, lăsați o steluță ⭐ pe [GitHub](https://github.com/markoopapa/ha-termoficare-oradea) — ajută comunitatea să descopere mai ușor integrarea!
