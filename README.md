@@ -79,3 +79,16 @@ entities:
   - entity: binary_sensor.termoficare_oradea_factura_restanta
     name: Factură restantă
 ```
+
+
+---
+
+## ☕ Susținere / Donații
+
+Dacă această integrare vă este utilă și doriți să susțineți mentenanța și dezvoltarea viitoare a proiectului, puteți oferi o cafea:
+
+- ☕ **Buy Me a Coffee**: [buymeacoffee.com](https://www.buymeacoffee.com)
+- 💳 **Revolut**: [revolut.me](https://revolut.me)
+- 🅿️ **PayPal**: [paypal.me](https://paypal.me)
+
+Dacă vă este de ajutor proiectul, lăsați o steluță ⭐ pe [GitHub](https://github.com/markoopapa/ha-termoficare-oradea) — ajută comunitatea să descopere mai ușor integrarea!
