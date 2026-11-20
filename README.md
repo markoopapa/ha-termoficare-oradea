@@ -1,8 +1,11 @@
 # Termoficare Oradea — Integrare Home Assistant (HACS)
 
-Integrare personalizată Home Assistant pentru preluarea automată a soldului, facturilor și restanțelor din portalul online al furnizorului **Termoficare Oradea S.A.** (`https://termoficare-oradea.ro`).
+<p align="center">
+  <img src="brand/icon@2x.png" width="140" height="140" alt="Termoficare Oradea Icon"><br>
+  <img src="brand/logo.png" width="280" alt="Termoficare Oradea Logo">
+</p>
 
-![Termoficare Oradea](custom_components/termoficare_oradea/brand/logo.png)
+Integrare personalizată Home Assistant pentru preluarea automată a soldului, facturilor și restanțelor din portalul online al furnizorului **Termoficare Oradea S.A.** (`https://termoficare-oradea.ro`).
 
 ---
 
