@@ -4,7 +4,7 @@ Runs custom_components/termoficare_oradea/api.py directly outside Home Assistant
 so you can test your credentials and inspect real parsed invoice & balance data.
 
 Usage:
-    python tools/probe_termoficare.py <felhasználónév_vagy_email> <jelszó>
+    python tools/probe_termoficare.py <utilizator_sau_email> <parola>
 """
 
 from __future__ import annotations
@@ -25,13 +25,11 @@ def load_api_module():
     """Load const and api without importing Home Assistant."""
     const_spec = importlib.util.spec_from_file_location("const", os.path.join(PKG_DIR, "const.py"))
     const_mod = importlib.util.module_from_spec(const_spec)
-    # Mock Platform for const.py
     ha_const = types.ModuleType("homeassistant.const")
     ha_const.Platform = types.SimpleNamespace(SENSOR="sensor", BINARY_SENSOR="binary_sensor")
     sys.modules["homeassistant.const"] = ha_const
     const_spec.loader.exec_module(const_mod)
 
-    # Register in sys.modules so api.py can do 'from .const import ...'
     sys.modules["termoficare_oradea"] = types.ModuleType("termoficare_oradea")
     sys.modules["termoficare_oradea.const"] = const_mod
 
@@ -42,8 +40,8 @@ def load_api_module():
 
 async def main():
     if len(sys.argv) < 3:
-        print("\nHasználat:")
-        print("  python tools/probe_termoficare.py <felhasználónév_vagy_email> <jelszó>\n")
+        print("\nUtilizare:")
+        print("  python tools/probe_termoficare.py <utilizator_sau_email> <parola>\n")
         return
 
     username = sys.argv[1]
@@ -52,49 +50,49 @@ async def main():
     api_mod = load_api_module()
     TermoficareApiClient = api_mod.TermoficareApiClient
 
-    print(f"\n[1/3] Csatlakozás a termoficare-oradea.ro portálhoz mint '{username}'...")
+    print(f"\n[1/3] Conectare la portalul termoficare-oradea.ro ca '{username}'...")
     cookie_jar = aiohttp.CookieJar(unsafe=True)
     async with aiohttp.ClientSession(cookie_jar=cookie_jar) as session:
         client = TermoficareApiClient(username, password, session)
 
-        print("[2/3] Bejelentkezési kísérlet...")
+        print("[2/3] Autentificare în curs...")
         success = await client.authenticate()
         if not success:
-            print("\n❌ SIKERTELEN BEJELENTKEZÉS!")
-            print("Kérlek ellenőrizd a felhasználónevet és a jelszót!")
+            print("\n❌ AUTENTIFICARE EȘUATĂ!")
+            print("Verificați dacă utilizatorul și parola sunt corecte!")
             return
 
-        print("✅ SIKERES BEJELENTKEZÉS!\n")
-        print("[3/3] Számlaadatok és pénzügyi helyzet letöltése...")
+        print("✅ AUTENTIFICARE CU SUCCES!\n")
+        print("[3/3] Preluare situație financiară și facturi...")
         try:
             data = await client.get_data()
-            print("\n" + "=" * 50)
-            print("TERMOFICARE ORADEA — EREDMÉNY")
-            print("=" * 50)
-            print(f"Ügyfél neve:        {data.get('client_name')}")
-            print(f"Fizetendő egyenleg: {data.get('total_balance')} RON")
-            print(f"Kintlévőség:        {data.get('restant')} RON")
-            print(f"Tartozás fennáll:   {'IGEN (Figyelmeztetés!)' if data.get('is_overdue') else 'NEM (Rendezve)'}")
+            print("\n" + "=" * 55)
+            print("TERMOFICARE ORADEA — SITUAȚIE CLIENT")
+            print("=" * 55)
+            print(f"Nume client:        {data.get('client_name')}")
+            print(f"Sold total de plată:{data.get('total_balance')} RON")
+            print(f"Sold restant:       {data.get('restant')} RON")
+            print(f"Restant existent:   {'DA (Atenție debite restante!)' if data.get('is_overdue') else 'NU (Situație la zi)'}")
             
             latest = data.get("latest_invoice", {})
             if latest:
-                print("\n--- Legutóbbi Számla ---")
-                print(f"Számlaszám:         {latest.get('nr_factura')}")
-                print(f"Dátum:              {latest.get('data_factura')}")
-                print(f"Szolgáltatás:       {latest.get('gestiune')}")
-                print(f"Nettó összeg:       {latest.get('valoare_fara_tva')} RON")
-                print(f"ÁFA összeg:         {latest.get('total_tva')} RON")
-                print(f"Bruttó végösszeg:   {latest.get('total_factura')} RON")
+                print("\n--- Detalii Ultima Factură ---")
+                print(f"Număr factură:      {latest.get('nr_factura')}")
+                print(f"Data facturii:      {latest.get('data_factura')}")
+                print(f"Gestiune:           {latest.get('gestiune')}")
+                print(f"Valoare fără TVA:   {latest.get('valoare_fara_tva')} RON")
+                print(f"Total TVA:          {latest.get('total_tva')} RON")
+                print(f"Total factură:      {latest.get('total_factura')} RON")
                 if latest.get("pdf_url"):
-                    print(f"PDF letöltés:       {latest.get('pdf_url')}")
+                    print(f"Descărcare PDF:     {latest.get('pdf_url')}")
             else:
-                print("\nNincs megjeleníthető számla a táblázatban.")
+                print("\nNu există facturi înregistrate.")
 
             invoices = data.get("invoices", [])
-            print(f"\nÖsszesen {len(invoices)} számla található az előzményekben.")
-            print("=" * 50)
+            print(f"\nTotal facturi în istoric: {len(invoices)}")
+            print("=" * 55)
         except Exception as e:
-            print(f"Hiba a lekérdezés során: {e}")
+            print(f"Eroare la preluarea datelor: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

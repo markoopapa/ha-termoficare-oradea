@@ -46,7 +46,7 @@ class TermoficareBaseSensor(CoordinatorEntity[TermoficareDataUpdateCoordinator],
 class TermoficareBalanceSensor(TermoficareBaseSensor):
     """Sensor for current total balance / sold de plată."""
 
-    _attr_name = "Fizetendő egyenleg"
+    _attr_name = "Sold total de plată"
     _attr_native_unit_of_measurement = "RON"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_state_class = SensorStateClass.TOTAL
@@ -76,7 +76,7 @@ class TermoficareBalanceSensor(TermoficareBaseSensor):
 class TermoficareLastInvoiceSensor(TermoficareBaseSensor):
     """Sensor for latest invoice total."""
 
-    _attr_name = "Utolsó számla"
+    _attr_name = "Ultima factură"
     _attr_native_unit_of_measurement = "RON"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_icon = "mdi:file-document-outline"
@@ -107,7 +107,7 @@ class TermoficareLastInvoiceSensor(TermoficareBaseSensor):
 class TermoficareLastInvoiceNumberSensor(TermoficareBaseSensor):
     """Sensor for latest invoice number."""
 
-    _attr_name = "Utolsó számlaszám"
+    _attr_name = "Număr factură"
     _attr_icon = "mdi:numeric"
 
     def __init__(self, coordinator, entry):
@@ -123,7 +123,7 @@ class TermoficareLastInvoiceNumberSensor(TermoficareBaseSensor):
 class TermoficareLastInvoiceDateSensor(TermoficareBaseSensor):
     """Sensor for latest invoice date."""
 
-    _attr_name = "Utolsó számla kibocsátása"
+    _attr_name = "Data facturii"
     _attr_icon = "mdi:calendar-month"
 
     def __init__(self, coordinator, entry):

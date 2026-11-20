@@ -1,80 +1,81 @@
-# Termoficare Oradea — Home Assistant Integráció (HACS)
+# Termoficare Oradea — Integrare Home Assistant (HACS)
 
-Egyedi Home Assistant komponens a **Termoficare Oradea S.A.** távhőszolgáltató számlaadatainak, aktuális egyenlegének és kintlévőségeinek automatikus lekérdezésére közvetlenül a hivatalos webes portálról (`https://termoficare-oradea.ro`).
+Integrare personalizată Home Assistant pentru preluarea automată a soldului, facturilor și restanțelor din portalul online al furnizorului **Termoficare Oradea S.A.** (`https://termoficare-oradea.ro`).
 
 ![Termoficare Oradea](custom_components/termoficare_oradea/brand/logo.png)
 
 ---
 
-## Jellemzők
+## 🌟 Funcționalități
 
-- **Automatikus bejelentkezés**: Közvetlenül kapcsolódik a `termoficare-oradea.ro` ügyfélportálhoz (nem igényel külső köztes szolgáltatást, mint a Pago).
-- **Fizetendő egyenleg (Sold Total)**: Folyamatosan mutatja a fennálló fizetendő összeget (`sensor.termoficare_oradea_fizetendo_egyenleg`).
-- **Utolsó számla részletei**: Számla összege, számlaszám, kibocsátási dátum, áfa, és közvetlen letöltési PDF link.
-- **Kintlévőség / Tartozás figyelés**: Bináris szenzor (`binary_sensor.termoficare_oradea_tartozas_kintlevoseg`), ami azonnal jelez, ha lejárt számla van.
-- **Többnyelvű támogatás**: Magyar (HU), Román (RO) és Angol (EN) felhasználói felület.
-- **HACS kompatibilis**: Telepíthető közvetlenül HACS Egyéni adattárként vagy manuálisan a `/config/custom_components` mappába másolva.
+- **Autentificare directă**: Se conectează securizat direct la portalul de clienți `termoficare-oradea.ro`.
+- **Sold total de plată**: Monitorizează în timp real suma totală rămasă de achitat.
+- **Detalii ultima factură**: Valoare totală, valoare fără TVA, TVA, număr factură, data emiterii și link direct pentru descărcarea facturii în format PDF.
+- **Alertă factură restantă**: Senzor binar (`binary_sensor`) ce indică dacă există debite sau facturi cu scadența depășită.
+- **Interfață completă în limba română**: Toate denumirile senzorilor și formularele de configurare sunt nativ în limba română.
+- **Actualizare automată**: Datele sunt reîmprospătate în fundal la fiecare 4 ore (interval configurabil).
 
 ---
 
-## Létrejövő Entitások
+## 📊 Entități create
 
-| Entitás | Típus | Leírás |
+| Entitate | Tip | Descriere |
 |---|---|---|
-| `sensor.termoficare_oradea_fizetendo_egyenleg` | Szenzor (MONETARY, RON) | Aktuális teljes fizetendő egyenleg (Sold de plată) |
-| `sensor.termoficare_oradea_utolso_szamla` | Szenzor (MONETARY, RON) | Utolsó kiállított számla végösszege |
-| `sensor.termoficare_oradea_utolso_szamlaszam` | Szenzor | Utolsó számla sorszáma |
-| `sensor.termoficare_oradea_utolso_szamla_kibocsatasa` | Szenzor | Utolsó számla kiállításának dátuma |
-| `binary_sensor.termoficare_oradea_tartozas_kintlevoseg` | Bináris szenzor (PROBLEM) | `Be` (On) ha lejárt tartozás vagy kifizetetlen számla van |
+| `sensor.termoficare_oradea_sold_total_de_plata` | Senzor monetar (`RON`) | Soldul total de plată la zi |
+| `sensor.termoficare_oradea_ultima_factura` | Senzor monetar (`RON`) | Valoarea ultimei facturi emise |
+| `sensor.termoficare_oradea_numar_factura` | Senzor text | Numărul ultimei facturi emise |
+| `sensor.termoficare_oradea_data_facturii` | Senzor dată | Data emiterii ultimei facturi |
+| `binary_sensor.termoficare_oradea_factura_restanta` | Senzor binar (`problem`) | `On` dacă există facturi restante neachitate |
 
 ---
 
-## Telepítés
+## 📥 Instalare
 
-### 1. Módszer: HACS Egyéni Adattárként (Ajánlott)
+### Metoda 1: Prin HACS (Recomandat)
 
-1. A Home Assistantban nyisd meg a **HACS** (vagy Közösségi Áruház) menüt.
-2. Kattints a jobb felső sarokban található **3 pontra** és válaszd az **Egyéni adattárak** (Custom repositories) lehetőséget.
-3. Másold be a GitHub tárhely URL-jét:
+1. În Home Assistant accesați meniul **HACS** (Community Store).
+2. Apăsați pe cele **3 puncte** din colțul din dreapta sus și selectați **Custom repositories** (Depozite personalizate).
+3. Introduceți adresa URL a depozitului:
    `https://github.com/markoopapa/ha-termoficare-oradea`
-4. Kategóriának válaszd: **Integráció** (Integration).
-5. Kattints a **Hozzáadás** (Add) gombra, majd keresd meg a listában és kattints a **Letöltés** gombra.
-6. **Indítsd újra a Home Assistantot**.
+4. La categorie alegeți: **Integration** (Integrare).
+5. Apăsați pe **Add** (Adaugă), apoi căutați **Termoficare Oradea** și apăsați pe **Download** (Descarcă).
+6. **Reporniți Home Assistant**.
 
-### 2. Módszer: Kézi telepítés (File Editor vagy Studio Code Server)
+### Metoda 2: Instalare manuală
 
-1. Másold a `custom_components/termoficare_oradea` mappát a Home Assistant `/config/custom_components/` könyvtárába:
+1. Copiați dosarul `custom_components/termoficare_oradea` în directorul `/config/custom_components/` al instanței dvs. de Home Assistant:
    `/config/custom_components/termoficare_oradea/`
-2. **Indítsd újra a Home Assistantot**.
+2. **Reporniți Home Assistant**.
 
 ---
 
-## Konfigurálás
+## ⚙️ Configurare
 
-1. Home Assistantban lépj a **Beállítások** -> **Eszközök és Szolgáltatások** -> **Integráció hozzáadása** menübe.
-2. Keress rá: **Termoficare Oradea**.
-3. Add meg a bejelentkezési adataidat:
-   - **Felhasználónév**: a `termoficare-oradea.ro` oldalon használt felhasználónév vagy e-mail cím.
-   - **Jelszó**: a fiókod jelszava.
-   - **Frissítési időköz**: alapértelmezett 240 perc (4 óra).
-4. Kattints a **Küldés** gombra.
+1. În Home Assistant navigați la **Setări** -> **Dispozitive și servicii** -> **Adaugă integrare**.
+2. Căutați **Termoficare Oradea**.
+3. Introduceți datele de conectare folosite pe portalul `termoficare-oradea.ro`:
+   - **Utilizator**: Numele de utilizator sau adresa de e-mail.
+   - **Parolă**: Parola contului.
+   - **Interval actualizare**: Implicit 240 minute (4 ore).
+4. Apăsați pe **Trimite**.
 
 ---
 
-## Mintakártya a Dashboardhoz (Lovelace)
+## 📱 Exemplu card Lovelace
 
 ```yaml
 type: entities
 title: Termoficare Oradea
+show_header_toggle: false
 entities:
-  - entity: sensor.termoficare_oradea_fizetendo_egyenleg
-    name: Fizetendő Egyenleg
-  - entity: sensor.termoficare_oradea_utolso_szamla
-    name: Legutóbbi Számla
-  - entity: sensor.termoficare_oradea_utolso_szamlaszam
-    name: Számlaszám
-  - entity: sensor.termoficare_oradea_utolso_szamla_kibocsatasa
-    name: Kibocsátás Dátuma
-  - entity: binary_sensor.termoficare_oradea_tartozas_kintlevoseg
-    name: Lejárt Tartozás
+  - entity: sensor.termoficare_oradea_sold_total_de_plata
+    name: Sold total de plată
+  - entity: sensor.termoficare_oradea_ultima_factura
+    name: Valoare ultimă factură
+  - entity: sensor.termoficare_oradea_numar_factura
+    name: Număr factură
+  - entity: sensor.termoficare_oradea_data_facturii
+    name: Data emiterii
+  - entity: binary_sensor.termoficare_oradea_factura_restanta
+    name: Factură restantă
 ```

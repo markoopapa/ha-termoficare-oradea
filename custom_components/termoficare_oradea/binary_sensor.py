@@ -24,7 +24,7 @@ class TermoficareOverdueBinarySensor(CoordinatorEntity[TermoficareDataUpdateCoor
 
     _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
-    _attr_name = "Tartozás / Kintlévőség"
+    _attr_name = "Factură restantă"
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
 
     def __init__(self, coordinator: TermoficareDataUpdateCoordinator, entry: ConfigEntry):
