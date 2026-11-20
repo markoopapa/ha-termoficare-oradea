@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Autentificare Termoficare Oradea",
+        "description": "Introduceți datele de conectare pentru contul dvs. termoficare-oradea.ro.",
+        "data": {
+          "username": "Utilizator (sau E-mail)",
+          "password": "Parolă",
+          "scan_interval": "Interval actualizare (minute)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Eroare de conexiune la server.",
+      "invalid_auth": "Utilizator sau parolă incorectă.",
+      "unknown": "A apărut o eroare neașteptată."
+    },
+    "abort": {
+      "already_configured": "Acest cont Termoficare este deja configurat."
+    }
+  }
+}

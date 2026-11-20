@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Termoficare Oradea Login",
+        "description": "Enter your termoficare-oradea.ro account credentials.",
+        "data": {
+          "username": "Username (or Email)",
+          "password": "Password",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Termoficare server.",
+      "invalid_auth": "Invalid username or password.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Termoficare account is already configured."
+    }
+  }
+}
