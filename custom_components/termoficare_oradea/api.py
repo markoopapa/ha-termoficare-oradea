@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .const import BASE_URL, LOGIN_URL, FACTURI_URL, FISA_URL, CLIENTI_URL, CITIRI_URL
+from .const import BASE_URL, LOGIN_URL, FACTURI_URL, FACTURI_STEP2_URL, FISA_URL, CLIENTI_URL, CITIRI_URL, PLATA_URL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -186,19 +186,37 @@ class TermoficareApiClient:
                             post_data[n] = inp.get("value", "")
 
                 now = datetime.now()
+                start_val = post_data.get("start") or "01.09.2013"
+                stop_val = post_data.get("stop") or f"{now.day:02d}.{now.month:02d}.{now.year}"
                 post_data.update({
+                    "action": "facturi",
+                    "step": "2",
                     "id_client_ace": opt_val,
                     "hash": hash_val,
                     "start_zi": "01",
-                    "start_luna": "01",
-                    "start_an": str(now.year - 2),
-                    "start": f"01.01.{now.year - 2}",
-                    "stop_zi": "31",
-                    "stop_luna": "12",
-                    "stop_an": str(now.year + 1),
-                    "stop": f"31.12.{now.year + 1}",
+                    "start_luna": "09",
+                    "start_an": "2013",
+                    "start": start_val,
+                    "stop_zi": f"{now.day:02d}",
+                    "stop_luna": f"{now.month:02d}",
+                    "stop_an": str(now.year),
+                    "stop": stop_val,
                 })
-                _LOGGER.debug("Submitting facturi filter POST: %s", post_data)
+                _LOGGER.debug("Submitting facturi filter POST to %s: %s", FACTURI_STEP2_URL, post_data)
+                try:
+                    async with self.session.post(
+                        FACTURI_STEP2_URL,
+                        data=post_data,
+                        headers=HEADERS,
+                        timeout=aiohttp.ClientTimeout(total=20),
+                        ssl=False,
+                    ) as resp:
+                        res_text = await resp.text()
+                        if "NR FACTURA" in res_text.upper():
+                            return res_text
+                except Exception as err:
+                    _LOGGER.warning("Error posting facturi filter to step2: %s", err)
+
                 try:
                     async with self.session.post(
                         FACTURI_URL,
@@ -207,7 +225,9 @@ class TermoficareApiClient:
                         timeout=aiohttp.ClientTimeout(total=20),
                         ssl=False,
                     ) as resp:
-                        return await resp.text()
+                        res_text = await resp.text()
+                        if "NR FACTURA" in res_text.upper():
+                            return res_text
                 except Exception as err:
                     _LOGGER.warning("Error posting facturi filter: %s", err)
 
@@ -282,45 +302,116 @@ class TermoficareApiClient:
 
         return html
 
+    async def _fetch_plata_data(self) -> str:
+        """Fetch online payment page (index.php?action=plata) to get active unpaid invoices."""
+        try:
+            html = await self._fetch_url(PLATA_URL)
+            if 'form name="login"' in html:
+                await self.authenticate()
+                html = await self._fetch_url(PLATA_URL)
+            return html
+        except Exception as err:
+            _LOGGER.warning("Error fetching plata page: %s", err)
+            return ""
+
+    def _parse_plata(self, html: str) -> Dict[str, Any]:
+        """Parse unpaid invoices and balance from index.php?action=plata."""
+        res: Dict[str, Any] = {
+            "unpaid_invoices": [],
+            "total_unpaid": 0.0,
+        }
+        if not html:
+            return res
+
+        soup = BeautifulSoup(html, "html.parser")
+        tables = soup.find_all("table")
+        for table in tables:
+            rows = table.find_all("tr")
+            if not rows:
+                continue
+
+            header_cols = [th.get_text(strip=True).upper() for th in table.find_all(["th", "td"])[:10]]
+            header_text = " ".join(header_cols)
+            if "RESTANTA" in header_text or "FACTURI RESTANTE" in html.upper():
+                for row in rows:
+                    tds = row.find_all("td")
+                    if len(tds) >= 4:
+                        texts = [td.get_text(strip=True) for td in tds]
+                        first = texts[0].upper()
+                        if any(h in first for h in ["GESTIUNE", "TOTAL", "REST DE PLATA", "SE RATEAZA"]):
+                            continue
+                        nr_fact = texts[1] if len(texts) > 1 else ""
+                        if re.search(r"\d{4,}", nr_fact):
+                            data_fact = texts[2] if len(texts) > 2 else ""
+                            tot_init = parse_amount(texts[3]) if len(texts) > 3 else 0.0
+                            restant = parse_amount(texts[4]) if len(texts) > 4 else tot_init
+                            res["unpaid_invoices"].append({
+                                "gestiune": texts[0],
+                                "nr_factura": nr_fact,
+                                "data_factura": data_fact,
+                                "total_initial": tot_init,
+                                "restanta": restant,
+                            })
+
+        m_rest = re.search(r"Rest de plat[aă][^\d]*([\d\.\,]+)", html, re.I)
+        if m_rest:
+            res["total_unpaid"] = parse_amount(m_rest.group(1))
+        elif res["unpaid_invoices"]:
+            res["total_unpaid"] = sum(inv["restanta"] for inv in res["unpaid_invoices"])
+
+        return res
+
     async def get_data(self) -> Dict[str, Any]:
         """Fetch invoices, balance, and account overview."""
         await self._ensure_logged_in()
 
         client_info = await self._fetch_client_info()
 
-        # Fetch both invoices and financial overview
+        # 1. Invoices list from facturi (with step=2)
         try:
             facturi_html = await self._fetch_facturi_data()
-            fisa_html = await self._fetch_fisa_data()
         except Exception as err:
-            _LOGGER.error("Failed to fetch Termoficare pages: %s", err)
-            raise
-
+            _LOGGER.warning("Failed to fetch facturi: %s", err)
+            facturi_html = ""
         invoices = self._parse_facturi(facturi_html)
-        fisa_data = self._parse_fisa(fisa_html)
+
+        # 2. Unpaid bills and balance from plata online
+        plata_html = await self._fetch_plata_data()
+        plata_data = self._parse_plata(plata_html)
+
+        # 3. Financial overview from fisa_financiara
+        try:
+            fisa_html = await self._fetch_fisa_data()
+            fisa_data = self._parse_fisa(fisa_html)
+        except Exception as err:
+            _LOGGER.debug("Failed to fetch fisa_financiara: %s", err)
+            fisa_data = {}
 
         if not invoices and fisa_data.get("invoices"):
             invoices = fisa_data["invoices"]
 
         # Merge results
         latest_inv = invoices[0] if invoices else {}
-        total_balance = fisa_data.get("sold_final")
-        
-        # If sold_final was not found in fisa, fallback to restant or latest_invoice
-        if total_balance is None:
-            total_balance = fisa_data.get("restant", 0.0)
-            if total_balance == 0.0 and latest_inv:
-                total_balance = latest_inv.get("total_factura", 0.0)
+
+        # Ground truth balance: plata_data reflects active invoices ready for payment
+        total_balance = plata_data.get("total_unpaid", 0.0)
+        if total_balance == 0.0 and fisa_data.get("sold_final") is not None:
+            total_balance = fisa_data.get("sold_final", 0.0)
+
+        restant = plata_data.get("total_unpaid", 0.0)
+        if restant == 0.0 and fisa_data.get("restant") is not None:
+            restant = fisa_data.get("restant", 0.0)
 
         data = {
             "client_name": client_info.get("client_name") or fisa_data.get("client_name") or self.username,
             "client_code": client_info.get("client_code") or fisa_data.get("client_code"),
-            "total_balance": round(total_balance or 0.0, 2),
+            "total_balance": round(total_balance, 2),
             "sold_initial": fisa_data.get("sold_initial", 0.0),
-            "restant": round(fisa_data.get("restant", 0.0), 2),
-            "is_overdue": (fisa_data.get("restant", 0.0) > 0.01),
+            "restant": round(restant, 2),
+            "is_overdue": (restant > 0.01),
             "latest_invoice": latest_inv,
-            "invoices": invoices[:10],
+            "invoices": invoices[:15],
+            "unpaid_invoices": plata_data.get("unpaid_invoices", []),
         }
         return data
 
@@ -335,41 +426,49 @@ class TermoficareApiClient:
             if not rows:
                 continue
 
-            header_text = " ".join([th.get_text(strip=True).upper() for th in table.find_all(["th", "td"])[:12]])
-            if "FACTURA" in header_text or "TOTAL VALOARE" in header_text or "NR. FACTURA" in header_text:
-                for row in rows:
+            header_cols = [th.get_text(strip=True).upper() for th in rows[0].find_all(["th", "td"])]
+            header_text = " ".join(header_cols)
+            if "FACTURA" in header_text or "NR FACTURA" in header_text:
+                nr_idx = 0
+                data_idx = 1
+                val_idx = 2
+                tva_idx = 3
+                tot_idx = 4
+                gest_idx = None
+                
+                for i, h in enumerate(header_cols):
+                    if "GESTIUNE" in h:
+                        gest_idx = i
+                    elif "NR" in h and "FACTURA" in h:
+                        nr_idx = i
+                    elif "DATA" in h:
+                        data_idx = i
+                    elif "VALOARE" in h:
+                        val_idx = i
+                    elif "TVA" in h:
+                        tva_idx = i
+                    elif "TOTAL" in h and "FACTURA" in h:
+                        tot_idx = i
+
+                for row in rows[1:]:
                     cols = row.find_all("td")
-                    if len(cols) >= 4:
+                    if len(cols) > max(nr_idx, data_idx, tot_idx):
                         texts = [c.get_text(strip=True) for c in cols]
-                        first_col = texts[0].upper()
-                        if any(h in first_col for h in ["GESTIUNE", "NR FACTURA", "NR.", "SERIE", "DATA"]):
+                        nr_fact = texts[nr_idx]
+                        if not re.search(r"\d{4,}", nr_fact):
                             continue
+
+                        data_fact = texts[data_idx]
+                        val_fara_tva = parse_amount(texts[val_idx]) if val_idx < len(texts) else 0.0
+                        tva = parse_amount(texts[tva_idx]) if tva_idx < len(texts) else 0.0
+                        total_fact = parse_amount(texts[tot_idx]) if tot_idx < len(texts) else 0.0
+                        gestiune = texts[gest_idx] if gest_idx is not None and gest_idx < len(texts) else "ENERGIE TERMICA"
 
                         pdf_link = None
                         pdf_tag = row.find("a", href=re.compile(r"\.pdf|get_pdf|download|action=pdf|id_factura", re.I))
                         if pdf_tag and pdf_tag.get("href"):
                             href = pdf_tag["href"]
                             pdf_link = href if href.startswith("http") else f"{BASE_URL}/{href.lstrip('/')}"
-
-                        gestiune = ""
-                        nr_fact = ""
-                        data_fact = ""
-                        val_fara_tva = 0.0
-                        tva = 0.0
-                        total_fact = 0.0
-
-                        if len(texts) >= 6:
-                            gestiune = texts[0]
-                            nr_fact = texts[1]
-                            data_fact = texts[2]
-                            val_fara_tva = parse_amount(texts[3])
-                            tva = parse_amount(texts[4])
-                            total_fact = parse_amount(texts[5])
-                        elif len(texts) >= 4:
-                            nr_fact = texts[0]
-                            data_fact = texts[1]
-                            val_fara_tva = parse_amount(texts[2])
-                            total_fact = parse_amount(texts[3])
 
                         if nr_fact and total_fact > 0:
                             invoices.append({
