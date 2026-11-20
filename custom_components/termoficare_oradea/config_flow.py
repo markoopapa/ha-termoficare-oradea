@@ -34,7 +34,7 @@ class TermoficareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Test authentication
             cookie_jar = aiohttp.CookieJar(unsafe=True)
-            session = async_create_clientsession(self.hass, cookie_jar=cookie_jar)
+            session = async_create_clientsession(self.hass, verify_ssl=False, cookie_jar=cookie_jar)
             api = TermoficareApiClient(username, password, session)
 
             try:

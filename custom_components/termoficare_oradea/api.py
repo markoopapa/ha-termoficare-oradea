@@ -55,7 +55,7 @@ class TermoficareApiClient:
 
         try:
             # First hit login page to initialize PHP session
-            async with self.session.get(LOGIN_URL, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            async with self.session.get(LOGIN_URL, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=15), ssl=False) as resp:
                 await resp.text()
 
             # Submit login form
@@ -70,7 +70,7 @@ class TermoficareApiClient:
                 "Content-Type": "application/x-www-form-urlencoded",
             }
 
-            async with self.session.post(LOGIN_URL, data=payload, headers=login_headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+            async with self.session.post(LOGIN_URL, data=payload, headers=login_headers, timeout=aiohttp.ClientTimeout(total=15), ssl=False) as resp:
                 text = await resp.text()
                 
                 # Check for known failure message
@@ -145,7 +145,7 @@ class TermoficareApiClient:
 
     async def _fetch_url(self, url: str) -> str:
         """Fetch a page HTML with current session cookies."""
-        async with self.session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+        async with self.session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=20), ssl=False) as resp:
             return await resp.text()
 
     def _parse_facturi(self, html: str) -> List[Dict[str, Any]]:

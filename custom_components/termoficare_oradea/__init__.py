@@ -15,7 +15,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Termoficare Oradea from a config entry."""
     # Use dedicated session with cookie jar so GDPR=1 and PHPSESSID persist
     cookie_jar = aiohttp.CookieJar(unsafe=True)
-    session = async_create_clientsession(hass, cookie_jar=cookie_jar)
+    session = async_create_clientsession(hass, verify_ssl=False, cookie_jar=cookie_jar)
 
     api = TermoficareApiClient(
         username=entry.data[CONF_USERNAME],
