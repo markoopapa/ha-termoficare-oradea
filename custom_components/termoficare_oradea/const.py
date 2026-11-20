@@ -13,7 +13,8 @@ DEFAULT_SCAN_INTERVAL = 240  # 4 ore (în minute)
 BASE_URL = "https://termoficare-oradea.ro"
 LOGIN_URL = f"{BASE_URL}/index.php?action=login"
 FACTURI_URL = f"{BASE_URL}/index.php?action=facturi"
-FISA_URL = f"{BASE_URL}/index.php?action=fisa"
+FISA_URL = f"{BASE_URL}/index.php?action=fisa_financiara"
+CLIENTI_URL = f"{BASE_URL}/index.php?action=clienti_ace"
 CITIRI_URL = f"{BASE_URL}/index.php?action=citiri"
 
 ATTRIBUTION = "Date furnizate de Termoficare Oradea S.A."
