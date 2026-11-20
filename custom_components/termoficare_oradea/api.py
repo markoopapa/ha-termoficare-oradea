@@ -39,10 +39,12 @@ def parse_amount(val: Any) -> float:
 class TermoficareApiClient:
     """Handles communication and session with termoficare-oradea.ro."""
 
-    def __init__(self, session: aiohttp.ClientSession, username: str, password: str):
-        self.session = session
-        self.username = username
-        self.password = password
+    def __init__(self, username: str = "", password: str = "", session: Optional[aiohttp.ClientSession] = None, **kwargs):
+        self.username = username or kwargs.get("username", "")
+        self.password = password or kwargs.get("password", "")
+        self.session = session or kwargs.get("session")
+        if not self.session and "session" in kwargs:
+            self.session = kwargs["session"]
         self._is_logged_in = False
 
     async def authenticate(self) -> bool:
@@ -54,7 +56,7 @@ class TermoficareApiClient:
                 response_url=aiohttp.client.URL(BASE_URL)
             )
 
-            # 2. Visit login page
+            # 2. Visit login page to obtain initial session cookie
             async with self.session.get(
                 LOGIN_URL,
                 headers=HEADERS,
@@ -63,11 +65,12 @@ class TermoficareApiClient:
             ) as resp:
                 await resp.text()
 
-            # 3. Post login form
+            # 3. Post login form with correct Romanian field names (utilizator & parola)
             payload = {
+                "action": "login",
+                "utilizator": self.username,
                 "user": self.username,
                 "parola": self.password,
-                "action": "login",
             }
             async with self.session.post(
                 LOGIN_URL,
@@ -86,8 +89,13 @@ class TermoficareApiClient:
                     return False
                 
                 # Check for critical alert on login form
-                if '<form name="login"' in text and '<table' in text and 'class="critical"' in text:
-                    _LOGGER.warning("Termoficare Oradea login rejected with critical alert")
+                if '<form name="login"' in text and 'class="critical"' in text:
+                    m_crit = re.search(r'class=["\']?critical["\']?[^>]*>([\s\S]*?)</table>', text, re.I)
+                    err_msg = ""
+                    if m_crit:
+                        err_soup = BeautifulSoup(m_crit.group(1), "html.parser")
+                        err_msg = err_soup.get_text(" ", strip=True)
+                    _LOGGER.warning("Termoficare Oradea login rejected with alert: %s", err_msg)
                     self._is_logged_in = False
                     return False
 
