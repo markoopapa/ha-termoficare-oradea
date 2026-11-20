@@ -89,7 +89,12 @@ class TermoficareLastInvoiceSensor(TermoficareBaseSensor):
     def native_value(self):
         """Return latest invoice total amount."""
         latest = self.coordinator.data.get("latest_invoice", {})
-        return latest.get("total_factura", 0.0)
+        val = latest.get("total_factura", 0.0)
+        if val == 0.0:
+            sold_init = self.coordinator.data.get("sold_initial", 0.0)
+            if sold_init > 0.0:
+                return sold_init
+        return val
 
     @property
     def extra_state_attributes(self):

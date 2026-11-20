@@ -152,19 +152,22 @@ class TermoficareApiClient:
         if "tbldata" in html and ("NR FACTURA" in html.upper() or "TOTAL FACTURA" in html.upper()):
             return html
 
-        # Check for filter form with id_client_ace
+        # Check for filter form with id_client_ace (select or input)
         soup = BeautifulSoup(html, "html.parser")
-        select_ace = soup.find("select", {"name": "id_client_ace"}) or soup.find("select", {"id": "id_client_ace"})
-        if select_ace:
-            options = select_ace.find_all("option")
+        elem_ace = soup.find(attrs={"name": "id_client_ace"}) or soup.find(attrs={"id": "id_client_ace"})
+        if elem_ace:
             opt_val = None
-            for opt in options:
-                v = opt.get("value")
-                if v and v != "0":
-                    opt_val = v
-                    break
-            if not opt_val and options:
-                opt_val = options[0].get("value")
+            if elem_ace.name == "select":
+                options = elem_ace.find_all("option")
+                for opt in options:
+                    v = opt.get("value")
+                    if v and v != "0":
+                        opt_val = v
+                        break
+                if not opt_val and options:
+                    opt_val = options[0].get("value")
+            else:
+                opt_val = elem_ace.get("value")
 
             if opt_val:
                 hash_val = ""
@@ -174,8 +177,16 @@ class TermoficareApiClient:
                 if m_hash:
                     hash_val = m_hash.group(1)
 
+                form = elem_ace.find_parent("form") or soup.find("form")
+                post_data = {}
+                if form:
+                    for inp in form.find_all("input"):
+                        n = inp.get("name")
+                        if n:
+                            post_data[n] = inp.get("value", "")
+
                 now = datetime.now()
-                post_data = {
+                post_data.update({
                     "id_client_ace": opt_val,
                     "hash": hash_val,
                     "start_zi": "01",
@@ -186,7 +197,7 @@ class TermoficareApiClient:
                     "stop_luna": "12",
                     "stop_an": str(now.year + 1),
                     "stop": f"31.12.{now.year + 1}",
-                }
+                })
                 _LOGGER.debug("Submitting facturi filter POST: %s", post_data)
                 try:
                     async with self.session.post(
@@ -213,17 +224,20 @@ class TermoficareApiClient:
             return html
 
         soup = BeautifulSoup(html, "html.parser")
-        select_ace = soup.find("select", {"name": "id_client_ace"}) or soup.find("select", {"id": "id_client_ace"})
-        if select_ace:
-            options = select_ace.find_all("option")
+        elem_ace = soup.find(attrs={"name": "id_client_ace"}) or soup.find(attrs={"id": "id_client_ace"})
+        if elem_ace:
             opt_val = None
-            for opt in options:
-                v = opt.get("value")
-                if v and v != "0":
-                    opt_val = v
-                    break
-            if not opt_val and options:
-                opt_val = options[0].get("value")
+            if elem_ace.name == "select":
+                options = elem_ace.find_all("option")
+                for opt in options:
+                    v = opt.get("value")
+                    if v and v != "0":
+                        opt_val = v
+                        break
+                if not opt_val and options:
+                    opt_val = options[0].get("value")
+            else:
+                opt_val = elem_ace.get("value")
 
             if opt_val:
                 hash_val = ""
@@ -233,8 +247,16 @@ class TermoficareApiClient:
                 if m_hash:
                     hash_val = m_hash.group(1)
 
+                form = elem_ace.find_parent("form") or soup.find("form")
+                post_data = {}
+                if form:
+                    for inp in form.find_all("input"):
+                        n = inp.get("name")
+                        if n:
+                            post_data[n] = inp.get("value", "")
+
                 now = datetime.now()
-                post_data = {
+                post_data.update({
                     "id_client_ace": opt_val,
                     "hash": hash_val,
                     "start_zi": "01",
@@ -245,7 +267,7 @@ class TermoficareApiClient:
                     "stop_luna": "12",
                     "stop_an": str(now.year + 1),
                     "stop": f"31.12.{now.year + 1}",
-                }
+                })
                 try:
                     async with self.session.post(
                         FISA_URL,
@@ -276,6 +298,9 @@ class TermoficareApiClient:
 
         invoices = self._parse_facturi(facturi_html)
         fisa_data = self._parse_fisa(fisa_html)
+
+        if not invoices and fisa_data.get("invoices"):
+            invoices = fisa_data["invoices"]
 
         # Merge results
         latest_inv = invoices[0] if invoices else {}
@@ -398,5 +423,37 @@ class TermoficareApiClient:
             m_restant = re.search(r"RESTANT[^\d]*([\d\.\,]+)", html, re.I)
             if m_restant:
                 res["restant"] = parse_amount(m_restant.group(1))
+
+        # Also parse invoices from fisa table if present
+        fisa_invoices = []
+        soup = BeautifulSoup(html, "html.parser")
+        for tr in soup.find_all("tr"):
+            tds = tr.find_all("td")
+            if len(tds) >= 4:
+                texts = [td.get_text(strip=True) for td in tds]
+                first = texts[0].upper()
+                if any(h in first for h in ["GESTIUNE", "NR FACTURA", "CLIENT", "SOLD", "TOTAL", "TIP"]):
+                    continue
+                if len(texts) >= 4 and texts[1].isdigit() and ("." in texts[2] or "/" in texts[2]):
+                    gestiune = texts[0]
+                    nr_fact = texts[1]
+                    data_fact = texts[2]
+                    tot_fact = parse_amount(texts[3])
+                    if tot_fact > 0:
+                        pdf_link = None
+                        pdf_tag = tr.find("a", href=re.compile(r"\.pdf|get_pdf|download|action=pdf|id_factura", re.I))
+                        if pdf_tag and pdf_tag.get("href"):
+                            href = pdf_tag["href"]
+                            pdf_link = href if href.startswith("http") else f"{BASE_URL}/{href.lstrip('/')}"
+                        fisa_invoices.append({
+                            "gestiune": gestiune,
+                            "nr_factura": nr_fact,
+                            "data_factura": data_fact,
+                            "valoare_fara_tva": tot_fact,
+                            "total_tva": 0.0,
+                            "total_factura": tot_fact,
+                            "pdf_url": pdf_link,
+                        })
+        res["invoices"] = fisa_invoices
 
         return res
